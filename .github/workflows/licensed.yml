@@ -1,74 +1,24 @@
-# This workflow checks the statuses of cached dependencies used in this action
-# with the help of the Licensed tool. If any licenses are invalid or missing,
-# this workflow will fail. See: https://github.com/licensee/licensed
-
-name: Licensed
+name: Dependency Audit
 
 on:
-  # Uncomment the below lines to run this workflow on pull requests and pushes
-  # to the default branch. This is useful for checking licenses before merging
-  # changes into the default branch.
-  # pull_request:
-  #   branches:
-  #     - main
-  # push:
-  #   branches:
-  #     - main
   workflow_dispatch:
+  schedule:
+    - cron: '17 8 * * 1'
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  licensed:
-    name: Check Licenses
+  audit:
     runs-on: ubuntu-latest
-
+    timeout-minutes: 10
     steps:
-      - name: Checkout
-        id: checkout
-        uses: actions/checkout@v6
-
-      - name: Setup Node.js
-        id: setup-node
-        uses: actions/setup-node@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version-file: .node-version
           cache: npm
-
-      - name: Install Dependencies
-        id: npm-ci
-        run: npm ci
-
-      - name: Setup Ruby
-        id: setup-ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: ruby
-
-      - uses: licensee/setup-licensed@v1.3.2
-        with:
-          version: 4.x
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-
-      # If this is a workflow_dispatch event, update the cached licenses.
-      - if: ${{ github.event_name == 'workflow_dispatch' }}
-        name: Update Licenses
-        id: update-licenses
-        run: licensed cache
-
-      # Then, commit the updated licenses to the repository.
-      - if: ${{ github.event_name == 'workflow_dispatch' }}
-        name: Commit Licenses
-        id: commit-licenses
-        run: |
-          git config --local user.email "licensed-ci@users.noreply.github.com"
-          git config --local user.name "licensed-ci"
-          git add .
-          git commit -m "Auto-update license files"
-          git push
-
-      # Last, check the status of the cached licenses.
-      - name: Check Licenses
-        id: check-licenses
-        run: licensed status
+      - run: npm ci
+      - run: npm audit --audit-level=high

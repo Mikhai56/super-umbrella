@@ -1,60 +1,29 @@
-# This workflow will lint the entire codebase using the
-# `super-linter/super-linter` action.
-#
-# For more information, see the super-linter repository:
-#     https://github.com/super-linter/super-linter
 name: Lint Codebase
 
 on:
   pull_request:
-    branches:
-      - main
+    branches: [main]
   push:
-    branches:
-      - main
+    branches: [main]
 
 permissions:
   contents: read
-  packages: read
-  statuses: write
+
+concurrency:
+  group: lint-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   lint:
-    name: Lint Codebase
     runs-on: ubuntu-latest
-
+    timeout-minutes: 10
     steps:
-      - name: Checkout
-        id: checkout
-        uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
-          fetch-depth: 0
-
-      - name: Setup Node.js
-        id: setup-node
-        uses: actions/setup-node@v6
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version-file: .node-version
           cache: npm
-
-      - name: Install Dependencies
-        id: install
-        run: npm ci
-
-      - name: Lint Codebase
-        id: super-linter
-        uses: super-linter/super-linter/slim@v8
-        env:
-          CHECKOV_FILE_NAME: .checkov.yml
-          DEFAULT_BRANCH: main
-          FILTER_REGEX_EXCLUDE: dist/**/*
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          LINTER_RULES_PATH: .
-          VALIDATE_ALL_CODEBASE: true
-          VALIDATE_BIOME_FORMAT: false
-          VALIDATE_BIOME_LINT: false
-          VALIDATE_GITHUB_ACTIONS_ZIZMOR: false
-          VALIDATE_JAVASCRIPT_ES: false
-          VALIDATE_JSCPD: false
-          VALIDATE_TYPESCRIPT_ES: false
-          VALIDATE_JSON: false
+      - run: npm ci
+      - run: npm run lint
